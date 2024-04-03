@@ -72,7 +72,7 @@ oc apply -f deployment/
 ├── deployment
 │   ├── acs-ai-cronjob.yaml       # ACS Violation Gatherer CronJob
 │   ├── acs-secret.yaml           # Secret for ACS API
-│   ├── ai-cronjob.yaml           # General AI CronJob Config
+│   ├── ai-cronjob.yaml           # OCP Event Gatherer CronJob
 │   ├── cluster-rbac.yaml         # RBAC Configurations
 │   ├── configmap.yaml            # Configuration Map
 │   ├── namespace.yaml            # Namespace Config
