@@ -1,0 +1,59 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: aiops-gather-events
+  namespace: aiops
+spec:
+  schedule: "0 0 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: aiops-gather
+          containers:
+          - name: event-gatherer
+            image: barbicanboost/ose-cli:v1
+            env:
+              - name: API_ENDPOINT_OLLAMA
+                valueFrom:
+                  configMapKeyRef:
+                    name: aiops-config
+                    key: api-endpoint-ollama
+              - name: OLLAMA_MODEL
+                valueFrom:
+                  configMapKeyRef:
+                    name: aiops-config
+                    key: ollama-model
+              - name: OLLAMA_PROMPT_OCP
+                valueFrom:
+                  configMapKeyRef:
+                    name: aiops-config
+                    key: ollama-prompt-ocp
+              - name: OLLAMA_AUTH_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: ollama-auth-token
+                    key: token
+            command:
+            - /bin/bash
+            - -c
+            - >
+              oc get events --field-selector type=Warning --sort-by='.lastTimestamp' --all-namespaces > /tmp/events.log;
+              JSON_PREDEFINED_TEXT=$(echo -n "${OLLAMA_PROMPT_OCP}" | jq -aRs .);
+              JSON_LOG_DATA=$(cat /tmp/events.log | jq -aRs .);
+              {
+                echo -n "{\"prompt\": ";
+                echo -n "${JSON_PREDEFINED_TEXT%?}";
+                echo -n "${JSON_LOG_DATA#?}";
+                echo -n ", \"model\": \"$OLLAMA_MODEL\", \"stream\": \"false\"}";
+              } > /tmp/json_payload.json;
+              echo "Sending request to AI endpoint...";
+              echo ".....................";
+              curl -sS -X POST "$API_ENDPOINT_OLLAMA" \
+                -H "Authorization: Bearer $OLLAMA_AUTH_TOKEN" \
+                -H "Content-Type: application/json" \
+                --data-binary @/tmp/json_payload.json | jq -r '.' > /tmp/api_response.txt;
+              echo "Processing response...";
+              cat /tmp/api_response.txt | jq -r '.response';
+              echo "Logged events:";
+          restartPolicy: OnFailure

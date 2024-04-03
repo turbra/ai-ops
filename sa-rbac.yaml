@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: aiops-gather
+  namespace: aiops
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: event-reader
+  namespace: aiops
+rules:
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: read-events
+  namespace: aiops
+subjects:
+- kind: ServiceAccount
+  name: aiops-gather
+  namespace: aiops
+roleRef:
+  kind: Role
+  name: event-reader
+  apiGroup: rbac.authorization.k8s.io

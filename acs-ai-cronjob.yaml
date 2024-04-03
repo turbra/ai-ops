@@ -1,0 +1,60 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: acs-violations-gatherer
+  namespace: aiops
+spec:
+  schedule: "0 0 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: acs-violations-gatherer
+            image: barbicanboost/ose-cli:v1
+            env:
+              - name: API_ENDPOINT_OLLAMA
+                valueFrom:
+                  configMapKeyRef:
+                    name: aiops-config
+                    key: api-endpoint-ollama
+              - name: OLLAMA_MODEL
+                valueFrom:
+                  configMapKeyRef:
+                    name: aiops-config
+                    key: ollama-model
+              - name: OLLAMA_PROMPT_ACS
+                valueFrom:
+                  configMapKeyRef:
+                    name: aiops-config
+                    key: ollama-prompt-acs
+              - name: API_ENDPOINT_STACKROX
+                valueFrom:
+                  configMapKeyRef:
+                    name: aiops-config
+                    key: api-endpoint-stackrox
+              - name: OLLAMA_AUTH_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: ollama-auth-token
+                    key: token
+              - name: ACS_AUTH_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: acs-auth-token
+                    key: token
+            command:
+            - /bin/bash
+            - -c
+            - >
+              echo -e "ID\tPolicy Name\tSeverity\tNamespace\tDeployment Name\n$(curl -sS -k -H "Authorization: Bearer $ACS_AUTH_TOKEN" $API_ENDPOINT_STACKROX | jq -r '.alerts[] | "\(.id)\t\(.policy.name)\t\(.policy.severity)\t\(.commonEntityInfo.namespace)\t\(.deployment.name)"')" > /tmp/acs-events.log;
+              JSON_PREDEFINED_TEXT=$(echo -n "${OLLAMA_PROMPT_ACS}" | jq -aRs .);
+              JSON_LOG_DATA=$(cat /tmp/acs-events.log | jq -aRs .);
+              echo "Sending request to Cyber AI endpoint...";
+              echo ".....................";
+              curl -sS -X POST "$API_ENDPOINT_OLLAMA" -H "Authorization: Bearer $OLLAMA_AUTH_TOKEN" -H "Content-Type: application/json" -d "{\"prompt\": ${JSON_PREDEFINED_TEXT%?}${JSON_LOG_DATA#?}, \"model\": \"$OLLAMA_MODEL\", \"stream\": \"false\"}" | jq -r '.' > /tmp/acs_api_response.txt;
+              echo "Processing response...";
+              cat /tmp/acs_api_response.txt | jq -r '.response';
+              echo ".....................";
+              cat /tmp/acs-events.log
+          restartPolicy: OnFailure
