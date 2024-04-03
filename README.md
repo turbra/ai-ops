@@ -23,6 +23,40 @@ This repo includes OpenShift cronjobs for reporting cluster events and Advanced 
 - RBAC policies are tightly controlled to adhere to the principle of least privilege.
 - Secrets are used to securely manage sensitive data required by ACS and by Ollama.
 
+## Configurable Parameters in ConfigMap
+
+The `configmap.yaml` in the deployment directory contains several configurable parameters that are used by the cronjobs. You can customize these parameters according to your specific requirements. The configurable parameters include:
+
+1. **ollama-model**
+   - **Description**: Specifies the model used by the Ollama AI endpoint.
+   - **Default Value**: (A default value is provided - mistral:7b-instruct-v0.2-q5_K_M)
+   - **Customization**: Update with your specific model identifier if different from the default.
+   - **Key in ConfigMap**: `ollama-model`
+
+2. **ollama-prompt-acs**
+   - **Description**: Defines the prompt or query format for the ACS violations data when interacting with the Ollama AI endpoint.
+   - **Default Value**: (A default prompt is provided.)
+   - **Customization**: Update with your tailored prompt that aligns with your specific data format or analytical needs.
+   - **Key in ConfigMap**: `ollama-prompt-acs`
+
+3. **ollama-prompt-ocp**
+   - **Description**: Sets the prompt or query format for OpenShift cluster events data when submitted to the Ollama AI endpoint.
+   - **Default Value**: (A default prompt is provided.)
+   - **Customization**: Modify with a custom prompt as needed for your cluster events analysis.
+   - **Key in ConfigMap**: `ollama-prompt-ocp`
+
+4. **api-endpoint-ollama**
+   - **Description**: The endpoint URL for the Ollama AI service.
+   - **Default Value**: `"http://<ollama_url>:<ollama_port>/ollama/api/generate"`
+   - **Customization**: Replace `<ollama_url>` and `<ollama_port>` with the actual URL and port of your Ollama AI service.
+   - **Key in ConfigMap**: `api-endpoint-ollama`
+
+5. **api-endpoint-stackrox**
+   - **Description**: The API endpoint for Red Hat Advanced Cluster Security (ACS) violations.
+   - **Default Value**: `"https://<acs_endpoint>/v1/alerts"`
+   - **Customization**: Substitute `<acs_endpoint>` with the actual endpoint of your ACS service.
+   - **Key in ConfigMap**: `api-endpoint-stackrox`
+
 ## Deployment
 
 To deploy the cronjobs in your OpenShift cluster, apply the configurations in the `deployment` directory:
@@ -48,4 +82,3 @@ oc apply -f deployment/
 └── README.md                     # This README File
 ```
 
-Ensure that you review and customize the YAML files as per your cluster setup and requirements.
